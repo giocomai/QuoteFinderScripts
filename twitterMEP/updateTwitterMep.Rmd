@@ -103,21 +103,29 @@ dataFolder <- "/srv/shiny-server/QuoteFinder/data"
 
 saveRDS(object = allMEPtweetsDF, file = file.path(dataFolder, "dataset.rds"))  
 
-hashtags <- data_frame(hashtags = unlist(dataset$hashtags)) %>%
-                   tidyr::drop_na() %>%
-                   count(hashtags, sort = TRUE) %>% select(hashtags)
-hashtags <- as.list(hashtags$hashtags)
-
-names(hashtags) <- paste0("#", unlist(hashtags))
-
-saveRDS(object = hashtags, file = file.path(dataFolder, "hashtags.rds"))
-
-lang <- data_frame(lang = unlist(dataset$lang)) %>%
+lang <- data_frame(lang = unlist(allMEPtweetsDF$lang)) %>%
   tidyr::drop_na() %>%
   count(lang, sort = TRUE) %>% select(lang)
 lang <- as.list(lang$lang)
 
-
 saveRDS(object = lang, file = file.path(dataFolder, "lang.rds"))   
+
+hashtags <- unlist(lang)
+
+hashtags <- vector("list", length = length(lang))
+hashtags <- setNames(object = hashtags, nm = unlist(lang))
+for (i in seq_along(lang)) {
+  temp <- data_frame(hashtags = allMEPtweetsDF %>%
+                       filter(lang==lang[[i]]) %>%
+                       select(hashtags) %>% 
+                       unlist()) %>% 
+    tidyr::drop_na()  %>%
+    count(hashtags, sort = TRUE) %>% select(hashtags)
+  hashtags[[i]] <- as.list(temp$hashtags)
+}
+
+saveRDS(object = hashtags, file = file.path(dataFolder, "hashtags.rds"))
+
+
 ```
 
