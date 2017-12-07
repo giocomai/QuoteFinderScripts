@@ -11,6 +11,7 @@ if (!require("pacman")) install.packages("pacman",  repos = "https://cloud.r-pro
 pacman::p_load("tidyverse")
 pacman::p_load("ROAuth")
 pacman::p_load("rtweet")
+pacman::p_load("stringr")
 # pacman::p_load("devtools")
 # devtools::install_github("mkearney/rtweet")
 # library("rtweet")
@@ -61,56 +62,62 @@ knitr::kable(x = newTweets %>% arrange())
 
 # Pre-process data
 
-Include only data for the last 91 days.
+Include only data for the last 91 days, and remove retweets. 
 
-```{r eval=FALSE}
+```{r}
 # transform into data frame
 
-allMEPtweetsDF <- readRDS(file = list.files(path = file.path("TwitterMEP", "DF"), full.names = TRUE)[1])[0,]
-for (i in list.files(path = file.path("TwitterMEP", "DF"), full.names = TRUE)) {
-  temp <- readRDS(file = i) 
-  if (is.null(temp)==FALSE) {
-    allMEPtweetsDF <- bind_rows(allMEPtweetsDF, temp %>% distinct(status_id, .keep_all = TRUE))
-  }
-}
-
-
-
-#create empty data frame
-allMEPtweetsDF <- readRDS(file = list.files(path = file.path("DF"), full.names = TRUE)[1])[0,] %>% 
-      select(screen_name, date, text, status_id, retweet_count, favorite_count, lang, NATIONALITY, NAME, GROUP, hashtags, urls_expanded)
+allMEPtweetsDF <- setNames(data.frame(matrix(ncol = 9, nrow = 0)), c("screen_name", "date", "text", "status_id", "retweet_count", "favorite_count", "lang", "hashtags", "urls_expanded"))
 
 for (i in list.files(path = file.path("DF"), full.names = TRUE)) {
   temp <- readRDS(file = i) 
   if (is.null(temp)==FALSE) {
-    allMEPtweetsDF <- bind_rows(allMEPtweetsDF, temp %>% distinct(status_id, .keep_all = TRUE)) %>%  mutate(date = as.Date(created_at)) %>% 
-      filter(date>(Sys.Date()-91)) %>% 
-      filter(is_retweet==FALSE) %>% 
-      select(screen_name, date, text, status_id, retweet_count, favorite_count, lang, NATIONALITY, NAME, GROUP, hashtags, urls_expanded)
+    allMEPtweetsDF <- bind_rows(allMEPtweetsDF, temp %>%
+                                  distinct(status_id, .keep_all = TRUE) %>%
+                                  mutate(date = as.Date(created_at)) %>% 
+                                  filter(date>(Sys.Date()-91)) %>% 
+                                  filter(is_retweet==FALSE)) %>% 
+      select(screen_name, date, text, status_id, retweet_count, favorite_count, lang, hashtags, urls_expanded)
   }
 }
 
-
 ## clean text
 
-allMEPtweetsDF$clean_text <- stringr::str_replace_all(
+allMEPtweetsDF$text <- stringr::str_replace_all(
   string = allMEPtweetsDF$text,
   pattern = stringr::regex(pattern = "@[[:alnum:]]+|#[[:alnum:]]+|http[[:graph:]]+|RT ", ignore_case = FALSE), replacement = "")
 
+allMEPtweetsDF$text <- stringr::str_replace_all(string = allMEPtweetsDF$text, pattern = stringr::fixed("&amp;"), replacement = "&") 
 
-# cleanTweets <- function(text) {
-#   text <-  stringr::str_replace_all(
-#     string = text,
-#     pattern = stringr::regex(pattern = "@[[:alnum:]]+|#[[:alnum:]]+|http[[:graph:]]+|RT ", ignore_case = FALSE), replacement = "")
-# }
+allMEPtweetsDF$Link <- paste0("<a href='https://twitter.com/", allMEPtweetsDF$screen_name, "/status/", allMEPtweetsDF$status_id, "'>Source</a>")
 
-  
+```
 
+Feed datasets to QuoteFinder
+
+```{r}
+dataFolder <- "/srv/shiny-server/QuoteFinder/data"
 
 # merge with initial data frame to include more details on MEPs
-allMEPfull <- left_join(allMEPtweetsDF, MEPsDF %>% rename(screen_name = SCREEN_NAME), by = "screen_name")
+#allMEPfull <- left_join(allMEPtweetsDF, MEPsDF %>% rename(screen_name = SCREEN_NAME), by = "screen_name")
 
-# store the final dataset
-saveRDS(object = allMEPfull, file = file.path("TwitterMEP", "data", "allMEPfull.rds"))
+saveRDS(object = allMEPtweetsDF, file = file.path(dataFolder, "dataset.rds"))  
+
+hashtags <- data_frame(hashtags = unlist(dataset$hashtags)) %>%
+                   tidyr::drop_na() %>%
+                   count(hashtags, sort = TRUE) %>% select(hashtags)
+hashtags <- as.list(hashtags$hashtags)
+
+names(hashtags) <- paste0("#", unlist(hashtags))
+
+saveRDS(object = hashtags, file = file.path(dataFolder, "hashtags.rds"))
+
+lang <- data_frame(lang = unlist(dataset$lang)) %>%
+  tidyr::drop_na() %>%
+  count(lang, sort = TRUE) %>% select(lang)
+lang <- as.list(lang$lang)
+
+
+saveRDS(object = lang, file = file.path(dataFolder, "lang.rds"))   
 ```
 
