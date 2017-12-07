@@ -83,11 +83,11 @@ for (i in list.files(path = file.path("DF"), full.names = TRUE)) {
 
 ## clean text
 
-allMEPtweetsDF$text <- stringr::str_replace_all(
+allMEPtweetsDF$clean_text <- stringr::str_replace_all(
   string = allMEPtweetsDF$text,
   pattern = stringr::regex(pattern = "@[[:alnum:]]+|#[[:alnum:]]+|http[[:graph:]]+|RT ", ignore_case = FALSE), replacement = "")
 
-allMEPtweetsDF$text <- stringr::str_replace_all(string = allMEPtweetsDF$text, pattern = stringr::fixed("&amp;"), replacement = "&") 
+allMEPtweetsDF$clean_text <- stringr::str_replace_all(string = allMEPtweetsDF$clean_text, pattern = stringr::fixed("&amp;"), replacement = "&") 
 
 allMEPtweetsDF$Link <- paste0("<a href='https://twitter.com/", allMEPtweetsDF$screen_name, "/status/", allMEPtweetsDF$status_id, "'>Source</a>")
 
