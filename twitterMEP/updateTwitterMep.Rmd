@@ -1,0 +1,116 @@
+---
+title: "Update Twitter MEP"
+author: "Giorgio Comai (OBCT/CCI)"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+if (!require("pacman")) install.packages("pacman",  repos = "https://cloud.r-project.org") # for taking care of package installation/loading
+pacman::p_load("tidyverse")
+pacman::p_load("ROAuth")
+pacman::p_load("rtweet")
+# pacman::p_load("devtools")
+# devtools::install_github("mkearney/rtweet")
+# library("rtweet")
+
+dir.create(path = file.path("archive"), showWarnings = FALSE)
+dir.create(path = file.path("DF"), showWarnings = FALSE)
+dir.create(path = file.path("logs"), showWarnings = FALSE)
+
+twitter_token <- readRDS(file = "twitter_token.rds")
+```
+
+
+
+```{r updateTweets, eval=TRUE, message=FALSE, warning=FALSE}
+# get list of all users
+fileInfo <- file.info(list.files(path = file.path("DF"), full.names = TRUE))
+
+users <- stringr::str_replace_all(string = list.files(path = file.path("DF")),
+                                  pattern = stringr::fixed(".rds"), 
+                                  replacement = "")
+newTweets <- tibble::data_frame(users = users, newTweets = NA)
+
+for (i in order(fileInfo$mtime)) {  # start processing by oldest modified
+  stored <- readRDS(file = rownames(fileInfo)[i])
+  if (is.null(stored)==FALSE) { # 
+    # if there's an error, print it but go ahead
+    temp <- tryCatch(expr = get_timeline(user = users[i], n = 3200, min_id = max(stored$status_id)),
+                     error = function(e) {
+                       # do nothing
+                     })
+    # if Twitter throws back anything looking real, add it to stored file
+    if (is.null(temp)==FALSE) {
+      if (nrow(temp)>0) {
+        if (is.na(temp$screen_name[1])==FALSE){
+          preSave <- bind_rows(temp, stored) %>% distinct(status_id, .keep_all = TRUE) %>% arrange(created_at)
+          saveRDS(object = preSave, file = file.path("DF", paste0(users[i], ".rds")))
+          # store how many new tweets in data frame for reference
+          newTweets$newTweets[i] <- nrow(preSave)-nrow(stored)
+          message(paste(newTweets[i,], collapse = " - "))
+          Sys.sleep(time = 1)
+        }
+      }
+    }
+  }
+}
+knitr::kable(x = newTweets %>% arrange())
+```
+
+# Pre-process data
+
+Include only data for the last 91 days.
+
+```{r eval=FALSE}
+# transform into data frame
+
+allMEPtweetsDF <- readRDS(file = list.files(path = file.path("TwitterMEP", "DF"), full.names = TRUE)[1])[0,]
+for (i in list.files(path = file.path("TwitterMEP", "DF"), full.names = TRUE)) {
+  temp <- readRDS(file = i) 
+  if (is.null(temp)==FALSE) {
+    allMEPtweetsDF <- bind_rows(allMEPtweetsDF, temp %>% distinct(status_id, .keep_all = TRUE))
+  }
+}
+
+
+
+#create empty data frame
+allMEPtweetsDF <- readRDS(file = list.files(path = file.path("DF"), full.names = TRUE)[1])[0,] %>% 
+      select(screen_name, date, text, status_id, retweet_count, favorite_count, lang, NATIONALITY, NAME, GROUP, hashtags, urls_expanded)
+
+for (i in list.files(path = file.path("DF"), full.names = TRUE)) {
+  temp <- readRDS(file = i) 
+  if (is.null(temp)==FALSE) {
+    allMEPtweetsDF <- bind_rows(allMEPtweetsDF, temp %>% distinct(status_id, .keep_all = TRUE)) %>%  mutate(date = as.Date(created_at)) %>% 
+      filter(date>(Sys.Date()-91)) %>% 
+      filter(is_retweet==FALSE) %>% 
+      select(screen_name, date, text, status_id, retweet_count, favorite_count, lang, NATIONALITY, NAME, GROUP, hashtags, urls_expanded)
+  }
+}
+
+
+## clean text
+
+allMEPtweetsDF$clean_text <- stringr::str_replace_all(
+  string = allMEPtweetsDF$text,
+  pattern = stringr::regex(pattern = "@[[:alnum:]]+|#[[:alnum:]]+|http[[:graph:]]+|RT ", ignore_case = FALSE), replacement = "")
+
+
+# cleanTweets <- function(text) {
+#   text <-  stringr::str_replace_all(
+#     string = text,
+#     pattern = stringr::regex(pattern = "@[[:alnum:]]+|#[[:alnum:]]+|http[[:graph:]]+|RT ", ignore_case = FALSE), replacement = "")
+# }
+
+  
+
+
+# merge with initial data frame to include more details on MEPs
+allMEPfull <- left_join(allMEPtweetsDF, MEPsDF %>% rename(screen_name = SCREEN_NAME), by = "screen_name")
+
+# store the final dataset
+saveRDS(object = allMEPfull, file = file.path("TwitterMEP", "data", "allMEPfull.rds"))
+```
+
