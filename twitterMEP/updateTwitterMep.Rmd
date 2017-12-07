@@ -106,26 +106,29 @@ saveRDS(object = allMEPtweetsDF, file = file.path(dataFolder, "dataset.rds"))
 lang <- data_frame(lang = unlist(allMEPtweetsDF$lang)) %>%
   tidyr::drop_na() %>%
   count(lang, sort = TRUE) %>% select(lang)
-lang <- as.list(lang$lang)
+langL <- as.list(lang$lang)
 
-saveRDS(object = lang, file = file.path(dataFolder, "lang.rds"))   
+saveRDS(object = langL, file = file.path(dataFolder, "lang.rds"))   
 
-hashtags <- unlist(lang)
-
-hashtags <- vector("list", length = length(lang))
-hashtags <- setNames(object = hashtags, nm = unlist(lang))
-for (i in seq_along(lang)) {
+hashtags <- vector("list", length = length(langL))
+hashtags <- setNames(object = hashtags, nm = unlist(langL))
+for (i in seq_along(langL)) {
   temp <- data_frame(hashtags = allMEPtweetsDF %>%
-                       filter(lang==lang[[i]]) %>%
+                       filter(lang==langL[[i]]) %>%
                        select(hashtags) %>% 
                        unlist()) %>% 
     tidyr::drop_na()  %>%
     count(hashtags, sort = TRUE) %>% select(hashtags)
-  hashtags[[i]] <- as.list(temp$hashtags)
+  tempL <- as.list(temp$hashtags)
+  if (length(tempL) == 0) {
+     names(tempL) <- NULL
+  } else {
+    names(tempL) <- paste0("#", unlist(tempL))
+  }
+  hashtags[[i]] <- tempL
 }
 
 saveRDS(object = hashtags, file = file.path(dataFolder, "hashtags.rds"))
-
 
 ```
 
