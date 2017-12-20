@@ -4,5 +4,6 @@ pacman::p_load("knitr")
 
 setwd(file.path("QuoteFinderScripts", "twitterMEP"))
 
-knitr::knit(input = "updateTwitterMep.Rmd",
-            output = file.path("logs", paste0(Sys.Date(), "-twitterMepUpdate.html")))
+rmarkdown::render(input = "updateTwitterMep.Rmd",
+                  output_file = paste0(Sys.Date(), "-twitterMepUpdate.html"),
+                  output_dir = "logs")
