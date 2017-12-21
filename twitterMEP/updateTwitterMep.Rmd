@@ -57,7 +57,7 @@ for (i in order(fileInfo$mtime)) {  # start processing by oldest modified
     }
   }
 }
-knitr::kable(x = newTweets %>% arrange())
+knitr::kable(x = newTweets %>% arrange(newTweets))
 ```
 
 # Pre-process data
@@ -107,16 +107,16 @@ dir.create(path = file.path("data"), showWarnings = FALSE)
 	}
 
 ### Short EP group names
+allMEPtweetsDF <- left_join(allMEPtweetsDF, MEPsDF %>% rename(screen_name = SCREEN_NAME), by = "screen_name")
 
 groupShortName <- data_frame(Long = unique(MEPsDF$GROUP)[is.na(unique(MEPsDF$GROUP))==FALSE], Short = c("EPP", "EFDD", "Greens–EFA", "S&D", "GUE-NGL", "ENF", "ALDE", "ECR", "NI"))
 
-allMEPtweetsDF$GroupShort <- allMEPfull$GROUP
+allMEPtweetsDF$GroupShort <- allMEPtweetsDF$GROUP
 
 for (i in seq_along(along.with = groupShortName$Long)) {
   allMEPtweetsDF$GroupShort <- stringr::str_replace_all(string = allMEPtweetsDF$GroupShort, pattern = stringr::fixed(groupShortName$Long[i]), replacement = groupShortName$Short[i])
 }
 
-allMEPtweetsDF <- left_join(allMEPtweetsDF, MEPsDF %>% rename(screen_name = SCREEN_NAME), by = "screen_name")
 
 ```
 
@@ -125,9 +125,6 @@ Feed datasets to QuoteFinder
 ```{r}
 dataFolder <- "/srv/shiny-server/QuoteFinderApp/data"
 dir.create(dataFolder, showWarnings = FALSE)
-
-# merge with initial data frame to include more details on MEPs
-#allMEPfull <- left_join(allMEPtweetsDF, MEPsDF %>% rename(screen_name = SCREEN_NAME), by = "screen_name")
 
 saveRDS(object = allMEPtweetsDF, file = file.path(dataFolder, "dataset.rds"))  
 
@@ -157,6 +154,14 @@ for (i in seq_along(langL)) {
 }
 
 saveRDS(object = hashtags, file = file.path(dataFolder, "hashtags.rds"))
+
+countries <- as.list(unique(MEPsDF$NATIONALITY))
+
+saveRDS(object = countries, file = file.path(dataFolder, "countries.rds"))
+
+EPGroupShort <- as.list(unique(allMEPtweetsDF$GroupShort))
+
+saveRDS(object = EPGroupShort, file = file.path(dataFolder, "EPGroupShort.rds"))
 
 ```
 
