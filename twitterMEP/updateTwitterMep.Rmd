@@ -123,7 +123,8 @@ allMEPtweetsDF <- left_join(allMEPtweetsDF, MEPsDF %>% rename(screen_name = SCRE
 Feed datasets to QuoteFinder
 
 ```{r}
-dataFolder <- "/srv/shiny-server/QuoteFinder/data"
+dataFolder <- "/srv/shiny-server/QuoteFinderApp/data"
+dir.create(dataFolder, showWarnings = FALSE)
 
 # merge with initial data frame to include more details on MEPs
 #allMEPfull <- left_join(allMEPtweetsDF, MEPsDF %>% rename(screen_name = SCREEN_NAME), by = "screen_name")
