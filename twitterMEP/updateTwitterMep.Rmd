@@ -93,6 +93,33 @@ allMEPtweetsDF$Link <- paste0("<a href='https://twitter.com/", allMEPtweetsDF$sc
 
 ```
 
+```{r metadata on MEPs}
+
+dir.create(path = file.path("data"), showWarnings = FALSE)
+
+## get list of twitter accounts of all MEPs
+	if (file.exists(file.path("data", "MEPsDF.rds"))==FALSE) {
+	  MEPsDF <- read_csv(file = "https://raw.githubusercontent.com/eliflab/European-Parliament-Open-Data/master/meps_full_list_with_twitter_accounts.csv") %>%
+	    mutate(SCREEN_NAME = stringr::str_replace_all(string = SCREEN_NAME, pattern = stringr::fixed("@"), replacement = ""))
+	  saveRDS(object = MEPsDF, file = file.path("data", "MEPsDF.rds"))
+	} else {
+	  MEPsDF <- read_rds(file.path("data", "MEPsDF.rds"))
+	}
+
+### Short EP group names
+
+groupShortName <- data_frame(Long = unique(MEPsDF$GROUP)[is.na(unique(MEPsDF$GROUP))==FALSE], Short = c("EPP", "EFDD", "Greens–EFA", "S&D", "GUE-NGL", "ENF", "ALDE", "ECR", "NI"))
+
+allMEPtweetsDF$GroupShort <- allMEPfull$GROUP
+
+for (i in seq_along(along.with = groupShortName$Long)) {
+  allMEPtweetsDF$GroupShort <- stringr::str_replace_all(string = allMEPtweetsDF$GroupShort, pattern = stringr::fixed(groupShortName$Long[i]), replacement = groupShortName$Short[i])
+}
+
+allMEPtweetsDF <- left_join(allMEPtweetsDF, MEPsDF %>% rename(screen_name = SCREEN_NAME), by = "screen_name")
+
+```
+
 Feed datasets to QuoteFinder
 
 ```{r}
