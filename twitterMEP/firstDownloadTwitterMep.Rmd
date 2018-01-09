@@ -1,0 +1,76 @@
+---
+title: "Update Twitter MEP"
+author: "Giorgio Comai (OBCT/CCI)"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+if (!require("pacman")) install.packages("pacman",  repos = "https://cloud.r-project.org") # for taking care of package installation/loading
+pacman::p_load("tidyverse")
+pacman::p_load("ROAuth")
+pacman::p_load("rtweet")
+pacman::p_load("stringr")
+# pacman::p_load("devtools")
+# devtools::install_github("mkearney/rtweet")
+# library("rtweet")
+
+dir.create(path = file.path("archive"), showWarnings = FALSE)
+dir.create(path = file.path("DF"), showWarnings = FALSE)
+dir.create(path = file.path("logs"), showWarnings = FALSE)
+
+twitter_token <- readRDS(file = "twitter_token.rds")
+```
+
+This document can be used to download the Twitter history of MEPs for the first time, or add new users that were not present in previous versions. 
+
+# Download table of Twitter users
+
+```{r}
+## get list of twitter accounts of all MEPs
+if (file.exists(file.path("MEPsDF.rds"))==FALSE) {
+  MEPsDF <- read_csv(file = "https://raw.githubusercontent.com/eliflab/European-Parliament-Open-Data/master/meps_full_list_with_twitter_accounts.csv") %>%
+    mutate(SCREEN_NAME = stringr::str_replace_all(string = SCREEN_NAME, pattern = stringr::fixed("@"), replacement = ""))
+  saveRDS(object = MEPsDF, file = file.path("MEPsDF.rds"))
+} else {
+  MEPsDF <- read_rds(file.path("MEPsDF.rds"))
+}
+
+allUsers <- MEPsDF$SCREEN_NAME[is.na(MEPsDF$SCREEN_NAME)==FALSE]
+existingUsers <- stringr::str_replace_all(string = list.files(path = file.path("DF")),
+                                  pattern = stringr::fixed(".rds"), 
+                                  replacement = "")
+
+newUsers <- allUsers[is.element(el = allUsers, set = existingUsers)==FALSE]
+```
+
+
+
+
+```{r}
+newTweets <- tibble::data_frame(users = newUsers, newTweets = NA)
+
+for (i in seq_along(newUsers)) {  # start processing by oldest modified
+  temp <- tryCatch(expr = get_timeline(user = newUsers[i], n = 3200),
+                   error = function(e) {
+                     newTweets$newTweets[i] <- NA
+                     NULL
+                   })
+  # if Twitter throws back anything looking real, add it to stored file
+  if (is.null(temp)==FALSE) {
+    if (nrow(temp)>0) {
+      if (is.na(temp$screen_name[1])==FALSE){
+        saveRDS(object = temp, file = file.path("DF", paste0(newUsers[i], ".rds")))
+        # store how many new tweets in data frame for reference
+        newTweets$newTweets[i] <- nrow(temp)
+        message(paste(newTweets[i,], collapse = " - "))
+        Sys.sleep(time = 1)
+      }
+    }
+  }
+}
+  
+knitr::kable(x = newTweets %>% arrange(newTweets))
+```
+
