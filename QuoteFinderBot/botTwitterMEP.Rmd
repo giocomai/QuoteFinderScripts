@@ -1,0 +1,60 @@
+---
+title: "QuoteFinder Twitter bot"
+author: "Giorgio Comai (OBCT/CCI)"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+if (!require("pacman")) install.packages("pacman",  repos = "https://cloud.r-project.org") # for taking care of package installation/loading
+pacman::p_load("tidyverse")
+pacman::p_load("tidytext")
+pacman::p_load("ROAuth")
+pacman::p_load("rtweet")
+pacman::p_load("stringr")
+pacman::p_load("reshape2")
+pacman::p_load("wordcloud")
+# pacman::p_load("devtools")
+# devtools::install_github("mkearney/rtweet")
+# library("rtweet")
+
+dir.create(path = "img",showWarnings = FALSE)
+
+twitter_token <- readRDS(file = "twitter_token.rds")
+```
+
+Read dataset and filter only last week, take most frequent hashtag in English, and post sentiment wordcloud. 
+
+```{r load data}
+dataFolder <- "/srv/shiny-server/QuoteFinderApp/data"
+dataset <- readRDS(file = file.path(dataFolder, "dataset.rds"))
+topHashtag <- readRDS(file = file.path(dataFolder, "hashtags.rds"))
+
+```
+
+
+```{r sentiment wordcloud first hashtag}
+
+filename <- file.path("img", paste(Sys.time(), "sentiment wordcloud.png"))
+
+png(filename = filename, width=1024,height=1024, res = 150)
+par(mar = rep(0, 4))
+dataset %>% 
+  filter(date>Sys.Date()-31) %>% 
+  filter(lang=="en") %>% 
+  filter(purrr::map_lgl(.x = hashtags, .f = function (x) is.element(el = as.character(topHashtag$en[1]), set = x))) %>%
+            select(clean_text) %>% 
+            unnest_tokens(input = clean_text, output = word) %>% 
+            anti_join(stop_words, by = "word") %>% 
+              inner_join(get_sentiments("bing"), by = "word") %>%
+              count(word, sentiment, sort = TRUE) %>%
+              acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+              comparison.cloud(colors = c("#F8766D", "#00BFC4"),
+                               max.words = 100, scale = c(2.5, 1), vfont=c("serif","plain"))
+dev.off()
+
+# Post tweet
+post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[1]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
+```
+
