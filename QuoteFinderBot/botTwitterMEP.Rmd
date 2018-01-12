@@ -33,8 +33,21 @@ topHashtag <- readRDS(file = file.path(dataFolder, "hashtags.rds"))
 
 ```
 
+Pick a tweet type randomly
 
-```{r sentiment wordcloud first hashtag}
+```{r}
+
+RandomTweetType <-
+  tibble::tribble(~id, ~TweetType,
+                  1, "sentiment wordcloud first english hashtag",
+                  2, "wordcloud sentiment all tweets en"
+)
+
+```
+
+
+
+```{r sentiment wordcloud first english hashtag}
 
 filename <- file.path("img", paste(Sys.time(), "sentiment wordcloud.png"))
 
@@ -51,10 +64,39 @@ dataset %>%
               count(word, sentiment, sort = TRUE) %>%
               acast(word ~ sentiment, value.var = "n", fill = 0) %>%
               comparison.cloud(colors = c("#F8766D", "#00BFC4"),
-                               max.words = 100, scale = c(2.5, 1), vfont=c("serif","plain"))
+                               max.words = 100, scale = c(2.5, 1),
+                               family = "Carlito", font = 1)
 dev.off()
 
 # Post tweet
-post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[1]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
+post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[1]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets at https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
+```
+
+
+```{r wordcloud sentiment all tweets en}
+
+filename <- file.path("img", paste(Sys.time(), "sentiment wordcloud.png"))
+
+png(filename = filename, width=1024,height=1024, res = 150)
+par(mar = rep(0, 4))
+dataset %>% 
+  filter(date>Sys.Date()-31) %>% 
+  filter(lang=="en") %>%
+  select(clean_text) %>% 
+  unnest_tokens(input = clean_text, output = word) %>% 
+  anti_join(stop_words, by = "word") %>% 
+  inner_join(get_sentiments("bing"), by = "word") %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("#F8766D", "#00BFC4"),
+                   max.words = 100, scale = c(2.5, 1),
+                   family = "Carlito", font = 1)
+dev.off()
+
+
+
+post_tweet(status = paste0("What are the most frequent positive and negative keywords used in their tweets by MEPs in the last month? Explore the tweets at https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
+
+
 ```
 
