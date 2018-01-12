@@ -89,7 +89,7 @@ allMEPtweetsDF$clean_text <- stringr::str_replace_all(
 
 allMEPtweetsDF$clean_text <- stringr::str_replace_all(string = allMEPtweetsDF$clean_text, pattern = stringr::fixed("&amp;"), replacement = "&") 
 
-allMEPtweetsDF$Link <- paste0("<a href='https://twitter.com/", allMEPtweetsDF$screen_name, "/status/", allMEPtweetsDF$status_id, "'>Source</a>")
+allMEPtweetsDF$Link <- paste0("<a href='https://twitter.com/", allMEPtweetsDF$screen_name, "/status/", allMEPtweetsDF$status_id, "'  target='_blank'>Source</a>")
 
 ```
 
