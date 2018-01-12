@@ -138,13 +138,21 @@ saveRDS(object = langL, file = file.path(dataFolder, "lang.rds"))
 hashtags <- vector("list", length = length(langL))
 hashtags <- setNames(object = hashtags, nm = unlist(langL))
 for (i in seq_along(langL)) {
-  temp <- data_frame(hashtags = allMEPtweetsDF %>%
-                       filter(lang==langL[[i]]) %>%
-                       select(hashtags) %>% 
-                       unlist()) %>% 
+  tempL <- data_frame(hashtags = allMEPtweetsDF %>%
+               filter(lang==langL[[i]]) %>%
+               select(hashtags) %>% 
+               unlist()) %>% 
     tidyr::drop_na()  %>%
-    count(hashtags, sort = TRUE) %>% select(hashtags)
-  tempL <- as.list(temp$hashtags)
+    count(hashtags, sort = TRUE) %>% # make hashtags in order of most frequent, by language
+    mutate(hashtagsLower = tolower(hashtags)) %>% # ignore case, but keep the case of the most frequently found case combination
+    group_by(hashtagsLower) %>%
+    add_tally(wt = n) %>%
+    distinct(hashtagsLower, .keep_all = TRUE) %>%
+    arrange(desc(nn)) %>% 
+    ungroup() %>%
+    select(hashtags) %>% 
+    pull(hashtags) %>%
+    as.list()
   if (length(tempL) == 0) {
      names(tempL) <- NULL
   } else {
