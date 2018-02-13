@@ -24,8 +24,6 @@ dir.create(path = "img",showWarnings = FALSE)
 twitter_token <- readRDS(file = "twitter_token.rds")
 ```
 
-Read dataset and filter only last week, take most frequent hashtag in English, and post sentiment wordcloud. 
-
 ```{r load data}
 dataFolder <- "/srv/shiny-server/QuoteFinderApp/data"
 dataset <- readRDS(file = file.path(dataFolder, "dataset.rds"))
@@ -40,11 +38,12 @@ Pick a tweet type randomly
 RandomTweetType <-
   tibble::tribble(~id, ~TweetType,
                   1, "sentiment wordcloud first english hashtag",
-                  2, "wordcloud sentiment all tweets en"
+                  2, "sentiment wordcloud second english hashtag",
+                  3, "sentiment wordcloud third english hashtag",
+                  4, "wordcloud sentiment all tweets en"
 )
 
 ```
-
 
 
 ```{r sentiment wordcloud first english hashtag}
@@ -71,6 +70,58 @@ dev.off()
 # Post tweet
 post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[1]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets at https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
 ```
+
+
+```{r sentiment wordcloud second english hashtag}
+
+filename <- file.path("img", paste(Sys.time(), "sentiment wordcloud.png"))
+
+png(filename = filename, width=1024,height=1024, res = 150)
+par(mar = rep(0, 4))
+dataset %>% 
+  filter(date>Sys.Date()-31) %>% 
+  filter(lang=="en") %>% 
+  filter(purrr::map_lgl(.x = hashtags, .f = function (x) is.element(el = as.character(topHashtag$en[2]), set = x))) %>%
+            select(clean_text) %>% 
+            unnest_tokens(input = clean_text, output = word) %>% 
+            anti_join(stop_words, by = "word") %>% 
+              inner_join(get_sentiments("bing"), by = "word") %>%
+              count(word, sentiment, sort = TRUE) %>%
+              acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+              comparison.cloud(colors = c("#F8766D", "#00BFC4"),
+                               max.words = 100, scale = c(2.5, 1),
+                               family = "Carlito", font = 1)
+dev.off()
+
+# Post tweet
+post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[2]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets at https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
+```
+
+```{r sentiment wordcloud third english hashtag}
+
+filename <- file.path("img", paste(Sys.time(), "sentiment wordcloud.png"))
+
+png(filename = filename, width=1024,height=1024, res = 150)
+par(mar = rep(0, 4))
+dataset %>% 
+  filter(date>Sys.Date()-31) %>% 
+  filter(lang=="en") %>% 
+  filter(purrr::map_lgl(.x = hashtags, .f = function (x) is.element(el = as.character(topHashtag$en[3]), set = x))) %>%
+            select(clean_text) %>% 
+            unnest_tokens(input = clean_text, output = word) %>% 
+            anti_join(stop_words, by = "word") %>% 
+              inner_join(get_sentiments("bing"), by = "word") %>%
+              count(word, sentiment, sort = TRUE) %>%
+              acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+              comparison.cloud(colors = c("#F8766D", "#00BFC4"),
+                               max.words = 100, scale = c(2.5, 1),
+                               family = "Carlito", font = 1)
+dev.off()
+
+# Post tweet
+post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[3]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets at https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
+```
+
 
 
 ```{r wordcloud sentiment all tweets en}
