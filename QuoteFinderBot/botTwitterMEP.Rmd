@@ -68,7 +68,7 @@ dataset %>%
 dev.off()
 
 # Post tweet
-post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[1]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets at https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
+post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[1]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets at https://www.europeandatajournalism.eu/Tools-for-journalists/Quote-Finder/"), media = filename, token = twitter_token)
 ```
 
 
@@ -94,7 +94,7 @@ dataset %>%
 dev.off()
 
 # Post tweet
-post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[2]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets at https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
+post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[2]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets at https://www.europeandatajournalism.eu/Tools-for-journalists/Quote-Finder/"), media = filename, token = twitter_token)
 ```
 
 ```{r sentiment wordcloud third english hashtag}
@@ -119,7 +119,7 @@ dataset %>%
 dev.off()
 
 # Post tweet
-post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[3]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets at https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
+post_tweet(status = paste0("What did MEPs have to say good or bad about", paste0(" #", topHashtag$en[3]), "? Here's a sentiment analysis wordcloud based on tweets posted in the last month. Explore the tweets at https://www.europeandatajournalism.eu/Tools-for-journalists/Quote-Finder/"), media = filename, token = twitter_token)
 ```
 
 
@@ -146,7 +146,7 @@ dev.off()
 
 
 
-post_tweet(status = paste0("What are the most frequent positive and negative keywords used in their tweets by MEPs in the last month? Explore the tweets at https://apps.europeandatajournalism.eu/QuoteFinderApp/"), media = filename, token = twitter_token)
+post_tweet(status = paste0("What are the most frequent positive and negative keywords used in their tweets by MEPs in the last month? Explore the tweets at https://www.europeandatajournalism.eu/Tools-for-journalists/Quote-Finder/"), media = filename, token = twitter_token)
 
 
 ```
