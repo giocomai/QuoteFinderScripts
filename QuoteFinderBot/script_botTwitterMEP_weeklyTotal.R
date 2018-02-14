@@ -5,5 +5,5 @@ pacman::p_load("knitr")
 setwd(file.path("QuoteFinderScripts", "QuoteFinderBot"))
 
 rmarkdown::render(input = "botTwitterMEP_weeklyTotal.Rmd",
-                  output_file = paste0(Sys.time(), "-botTwitterMep.html"),
+                  output_file = paste0(Sys.time(), "-botTwitterMEP_weeklyTotal.html"),
                   output_dir = "logs")
