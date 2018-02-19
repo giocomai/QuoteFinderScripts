@@ -38,7 +38,7 @@ for (i in order(fileInfo$mtime)) {  # start processing by oldest modified
   stored <- readRDS(file = rownames(fileInfo)[i])
   if (is.null(stored)==FALSE) { # 
     # if there's an error, print it but go ahead
-    temp <- tryCatch(expr = get_timeline(user = users[i], n = 3200, min_id = max(stored$status_id)),
+    temp <- tryCatch(expr = get_timeline(user = users[i], n = 3200, min_id = max(stored$status_id), token = twitter_token),
                      error = function(e) {
                        # do nothing
                      })
