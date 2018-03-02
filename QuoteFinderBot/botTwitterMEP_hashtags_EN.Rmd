@@ -103,7 +103,7 @@ colour <- dataset %>%
     n > quantile(n)[4]& n<=quantile(n)[5] ~ blues[4]
   )) %>% pull(colour)
 
-sizeVar <- as.numeric(quantile(dataset$n)[5]/quantile(dataset$n)[1]/nrow(dataset)*25)
+sizeVar <- as.numeric(quantile(dataset$n)[5]/quantile(dataset$n)[1]/nrow(dataset)*44)
 graph <- dataset %>%
   wordcloud2(size = sizeVar, color = colour)
 
