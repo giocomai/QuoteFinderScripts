@@ -75,9 +75,10 @@ for (i in list.files(path = file.path("DF"), full.names = TRUE)) {
     allMEPtweetsDF <- bind_rows(allMEPtweetsDF, temp %>%
                                   distinct(status_id, .keep_all = TRUE) %>%
                                   mutate(date = as.Date(created_at)) %>% 
+                                  rename(time = created_at) %>% 
                                   filter(date>(Sys.Date()-91)) %>% 
                                   filter(is_retweet==FALSE)) %>% 
-      select(screen_name, date, text, status_id, retweet_count, favorite_count, lang, hashtags, urls_expanded)
+      select(screen_name, date, time, text, status_id, retweet_count, favorite_count, lang, hashtags, urls_expanded)
   }
 }
 
@@ -178,9 +179,6 @@ if (file.exists(file.path(dataFolder, "langCode.rds"))==FALSE) {
   
   saveRDS(object = langCode, file = file.path(dataFolder, "langCode.rds"))
 }
-
-
-
 
 
 ```
