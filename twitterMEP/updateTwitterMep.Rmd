@@ -110,7 +110,16 @@ dir.create(path = file.path("data"), showWarnings = FALSE)
 ### Short EP group names
 allMEPtweetsDF <- left_join(allMEPtweetsDF, MEPsDF %>% rename(screen_name = SCREEN_NAME), by = "screen_name")
 
-groupShortName <- data_frame(Long = unique(MEPsDF$GROUP)[is.na(unique(MEPsDF$GROUP))==FALSE], Short = c("EPP", "EFDD", "Greens–EFA", "S&D", "GUE-NGL", "ENF", "ALDE", "ECR", "NI"))
+groupShortName <- tribble(~Long,  ~Short, 
+                         "Group of the European People's Party (Christian Democrats)", "EPP", 
+                         "Europe of Freedom and Direct Democracy Group", "EFDD",
+                         "Group of the Greens/European Free Alliance", "Greens–EFA",
+                         "Group of the Progressive Alliance of Socialists and Democrats in the European Parliament", "S&D",
+                         "Confederal Group of the European United Left - Nordic Green Left", "GUE-NGL",
+                         "Europe of Nations and Freedom Group", "ENF",
+                         "Group of the Alliance of Liberals and Democrats for Europe", "ALDE", 
+                         "European Conservatives and Reformists Group", "ECR", 
+                         "Non-attached Members", "NI")
 
 allMEPtweetsDF$GroupShort <- allMEPtweetsDF$GROUP
 
