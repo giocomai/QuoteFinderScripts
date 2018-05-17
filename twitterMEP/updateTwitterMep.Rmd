@@ -172,7 +172,67 @@ for (i in seq_along(langL)) {
   hashtags[[i]] <- tempL
 }
 
+
+
+
 saveRDS(object = hashtags, file = file.path(dataFolder, "hashtags.rds"))
+
+
+## Trending hashtags
+
+trendingHashtags <- vector("list", length = length(langL))
+trendingHashtags <- setNames(object = trendingHashtags, nm = unlist(langL))
+
+for (i in seq_along(langL)) {
+  tempL <- allMEPtweetsDF %>% 
+    filter(is.na(hashtags)==FALSE) %>%
+    filter(lang==langL[[i]])
+  
+  if(nrow(tempL)>0) {
+    tempL <- tempL %>% 
+      select(date, hashtags) %>% 
+      unnest() %>% 
+      mutate(hashtags = tolower(hashtags)) %>% 
+      mutate(NewOld = if_else(condition = date>as.Date(Sys.Date()-8),
+                              true = "New", false = "Old")) %>% 
+      count(hashtags, NewOld) %>% 
+      ungroup() %>%
+      spread(NewOld, n, fill = 0) 
+  }
+   
+  if (ncol(tempL)==3) {
+    tempL <- tempL %>% 
+      mutate_if(is.numeric, funs((. + 1) / sum(. + 1))) %>%
+      mutate(logratio = log(New / Old)) %>%
+      arrange(desc(logratio)) %>% 
+      transmute(hashtags, NewLog = logratio) %>% 
+      head(5) %>% 
+      mutate(hashtags = paste0("#", hashtags)) %>% 
+      pull(hashtags)
+    
+    trendingHashtags[[i]] <- tempL
+  }
+}
+
+trendingHashtags$AnyLanguage <- allMEPtweetsDF %>% 
+  filter(is.na(hashtags)==FALSE) %>% 
+  select(date, hashtags) %>% 
+  unnest() %>% 
+  mutate(hashtags = tolower(hashtags)) %>% 
+  mutate(NewOld = if_else(condition = date>as.Date(Sys.Date()-8),
+                          true = "New", false = "Old")) %>% 
+  count(hashtags, NewOld) %>% 
+  ungroup() %>%
+  spread(NewOld, n, fill = 0) %>%
+  mutate_if(is.numeric, funs((. + 1) / sum(. + 1))) %>%
+  mutate(logratio = log(New / Old)) %>%
+  arrange(desc(logratio)) %>% 
+  transmute(hashtags, NewLog = logratio) %>% 
+  head(5) %>% 
+  mutate(hashtags = paste0("#", hashtags)) %>% 
+  pull(hashtags)
+
+saveRDS(object = trendingHashtags, file = file.path(dataFolder, "trendingHashtags.rds"))
 
 countries <- as.list(unique(MEPsDF$NATIONALITY))
 
