@@ -132,9 +132,13 @@ for (i in seq_along(along.with = groupShortName$Long)) {
 
 Feed datasets to QuoteFinder
 
-
 ```{r}
 dataFolder <- "/srv/shiny-server/QuoteFinderApp/data"
+```
+
+
+```{r}
+
 dir.create(dataFolder, showWarnings = FALSE)
 
 saveRDS(object = allMEPtweetsDF, file = file.path(dataFolder, "dataset.rds"))  
@@ -173,8 +177,6 @@ for (i in seq_along(langL)) {
 }
 
 
-
-
 saveRDS(object = hashtags, file = file.path(dataFolder, "hashtags.rds"))
 
 
@@ -184,12 +186,12 @@ trendingHashtags <- vector("list", length = length(langL))
 trendingHashtags <- setNames(object = trendingHashtags, nm = unlist(langL))
 
 for (i in seq_along(langL)) {
-  tempL <- allMEPtweetsDF %>% 
+  currentDatasetPre <- allMEPtweetsDF %>% 
     filter(is.na(hashtags)==FALSE) %>%
     filter(lang==langL[[i]])
   
-  if(nrow(tempL)>0) {
-    tempL <- tempL %>% 
+  if(nrow(currentDatasetPre)>0) {
+    tempL <- currentDatasetPre %>% 
       select(date, hashtags) %>% 
       unnest() %>% 
       mutate(hashtags = tolower(hashtags)) %>% 
@@ -198,19 +200,50 @@ for (i in seq_along(langL)) {
       count(hashtags, NewOld) %>% 
       ungroup() %>%
       spread(NewOld, n, fill = 0) 
+    
+    
+  currentHashtagsDF <- currentDatasetPre %>%
+      select(screen_name, hashtags) %>%
+      unnest() %>%
+      na.omit() %>% 
+      group_by(hashtags) %>%
+      add_count(sort = TRUE) %>% 
+      rename(nTotalOrig = n) %>% 
+      mutate(hashtagsLower = tolower(hashtags)) %>% # ignore case, but keep the case of the most frequently found case combination
+      group_by(hashtagsLower) %>%
+      add_tally() %>%
+      ungroup() %>% 
+      rename(nTotal = n) %>% 
+      group_by(hashtags, nTotal) %>% 
+      distinct(screen_name, .keep_all = TRUE) %>% 
+      add_count() %>% 
+      rename(nMepPerHashtag = n) %>% 
+      select(-screen_name) %>% 
+      arrange(desc(nMepPerHashtag), desc(nTotal)) %>% 
+      ungroup() %>% 
+      distinct(hashtagsLower, .keep_all = TRUE) %>% 
+      mutate(hashtagString = paste0("#", hashtags, " (", nMepPerHashtag, " MEPs, ", nTotal, " tweets)"))
   }
    
+  ##  consider also how many MEPs
+  
+  
   if (ncol(tempL)==3) {
     tempL <- tempL %>% 
       mutate_if(is.numeric, funs((. + 1) / sum(. + 1))) %>%
       mutate(logratio = log(New / Old)) %>%
       arrange(desc(logratio)) %>% 
       transmute(hashtags, NewLog = logratio) %>% 
+      head(200) 
+    
+    tempL <- left_join(tempL, 
+          currentHashtagsDF %>% transmute(hashtags = hashtagsLower, nMepPerHashtag),
+          by = "hashtags") %>% 
+  arrange(desc(NewLog*nMepPerHashtag)) %>% 
       head(5) %>% 
-      mutate(hashtags = paste0("#", hashtags)) %>% 
       pull(hashtags)
     
-    trendingHashtags[[i]] <- tempL
+    trendingHashtags[[i]] <- paste0("#", as.character(hashtags[[i]])[is.element(el = tolower(as.character(hashtags[[i]])), set = tempL)])
   }
 }
 
