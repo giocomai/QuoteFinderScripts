@@ -25,41 +25,71 @@ pacman::p_load(RColorBrewer)
 pacman::p_load(webshot)
 pacman::p_load(htmlwidgets)
 
-bluesFunc <- colorRampPalette(colors = c("#4292C6", "#08306B"))
+bluesFunc <- colorRampPalette(colors = c("#fdb930", "#060709"))
 blues <- bluesFunc(5)
 
 dir.create(path = "img",showWarnings = FALSE)
 
 twitter_token <- readRDS(file = "twitter_token.rds")
-
 ```
 
 ```{r load data}
 dataFolder <- "/srv/shiny-server/QuoteFinderApp/data"
-trendingHashtags <- readRDS(file = file.path(dataFolder, "trendingHashtags.rds"))
 dataset <- readRDS(file = file.path(dataFolder, "dataset.rds")) %>% 
   filter(date>Sys.Date()-31)
 #topHashtag <- readRDS(file = file.path(dataFolder, "hashtags.rds"))
 
+lang <- data_frame(lang = unlist(dataset$lang)) %>%
+  tidyr::drop_na() %>%
+  count(lang, sort = TRUE) %>% select(lang)
+langL <- as.list(lang$lang)
+
+hashtags <- vector("list", length = length(langL))
+hashtags <- setNames(object = hashtags, nm = unlist(langL))
+for (i in seq_along(langL)) {
+  tempL <- data_frame(hashtags = dataset %>%
+               filter(lang==langL[[i]]) %>%
+               select(hashtags) %>% 
+               unlist()) %>% 
+    tidyr::drop_na()  %>%
+    count(hashtags, sort = TRUE) %>% # make hashtags in order of most frequent, by language
+    mutate(hashtagsLower = tolower(hashtags)) %>% # ignore case, but keep the case of the most frequently found case combination
+    group_by(hashtagsLower) %>%
+    add_tally(wt = n) %>%
+    distinct(hashtagsLower, .keep_all = TRUE) %>%
+    arrange(desc(nn)) %>% 
+    ungroup() %>%
+    mutate(hashtags = paste0(hashtags, " (", nn, ")")) %>% 
+    select(hashtags) %>% 
+    pull(hashtags) %>%
+    as.list()
+  if (length(tempL) == 0) {
+     names(tempL) <- NULL
+  } else {
+    names(tempL) <- paste0("#", unlist(tempL))
+  }
+  hashtags[[i]] <- tempL
+}
+
 ```
 
-Pick a hashtag randomly among top 10
+Pick a hashtag randomly among top 5
 
 ```{r no sentiment hashtag}
 
-randomTopHashtag <- unlist(sample(head(trendingHashtags$en, 3), 1))
+randomTopHashtag <- unlist(sample(head(hashtags$de, 5), 1))
 
 NrOfTweets <- str_extract(string = randomTopHashtag, pattern = "([[:digit:]]+)")
 hashtag <- str_extract(string = randomTopHashtag, pattern = "([[:alnum:]]+)")
 
 dataset <- dataset %>% 
-  filter(lang=="en") %>% 
+  filter(lang=="de") %>% 
   filter(purrr::map_lgl(.x = hashtags, .f = function (x) is.element(el = as.character(hashtag), set = x))) %>%
     select(clean_text) %>% 
   unnest_tokens(input = clean_text, output = word) %>% 
   # remove stopwords, if list for the relevant language is available, otherwise do nothing
-  when(is.element(el = "en", set = stopwords::stopwords_getlanguages(source = "stopwords-iso")) ~
-         anti_join(., data_frame(word = stopwords::stopwords(language = "en", source = "stopwords-iso")), by = "word"),
+  when(is.element(el = "de", set = stopwords::stopwords_getlanguages(source = "stopwords-iso")) ~
+         anti_join(., data_frame(word = stopwords::stopwords(language = "de", source = "stopwords-iso")), by = "word"),
        ~ .) %>% 
 count(word, sort = TRUE)  
 
@@ -70,7 +100,7 @@ colour <- dataset %>%
     n > quantile(n)[1]& n<=quantile(n)[2] ~ blues[2],
     n > quantile(n)[2]& n<=quantile(n)[3] ~ blues[3],
     n > quantile(n)[3]& n<=quantile(n)[4] ~ blues[4],
-    n > quantile(n)[4]& n<=quantile(n)[5] ~ blues[4]
+    n > quantile(n)[4]& n<=quantile(n)[5] ~ blues[5]
   )) %>% pull(colour)
 
 sizeVar <- as.numeric(quantile(dataset$n)[5]/quantile(dataset$n)[1]/nrow(dataset)*44)
@@ -79,7 +109,7 @@ graph <- dataset %>%
 
 graph <- dataset %>% wordcloud2(color = colour, size = sizeVar)
 
-filename <- file.path("img", paste(Sys.time(), "wordcloud2 1month hashtag", hashtag, "EN.png", sep = "-"))
+filename <- file.path("img", paste(Sys.time(), "wordcloud2 1month hashtag", hashtag, "DE.png", sep = "-"))
 
 saveWidget(graph,"tmp.html",selfcontained = FALSE)
 webshot("tmp.html", filename, delay = 10, vwidth = 2048, vheight = 1512)
@@ -90,5 +120,5 @@ randomTopHashtag
 
 ```{r}
 # Post tweet
-post_tweet(status = paste0("Here's one of the trending hashtags among MEPs tweeting in English this week: #", hashtag, ". Find out more at https://www.europeandatajournalism.eu/Tools-for-journalists/Quote-Finder/"), media = filename, token = twitter_token)
+post_tweet(status = paste0("In the last month, MEPs posted ", NrOfTweets, " tweets in German with the hashtag #", hashtag, ". This is what it was all about. Explore the tweets also in other languages at https://www.europeandatajournalism.eu/Tools-for-journalists/Quote-Finder/"), media = filename, token = twitter_token)
 ```
