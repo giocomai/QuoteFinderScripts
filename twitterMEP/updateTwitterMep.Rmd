@@ -84,9 +84,13 @@ for (i in list.files(path = file.path("DF"), full.names = TRUE)) {
 
 ## clean text
 
+
+
 allMEPtweetsDF$clean_text <- stringr::str_replace_all(
   string = allMEPtweetsDF$text,
   pattern = stringr::regex(pattern = "@\\w+|#[[:alnum:]]+|http[[:graph:]]+|RT ", ignore_case = FALSE), replacement = "")
+
+allMEPtweetsDF <- allMEPtweetsDF %>% filter(stringr::str_detect(string = clean_text, pattern = stringr::fixed(pattern = "retweeted", ignore_case = TRUE))==FALSE)
 
 allMEPtweetsDF$clean_text <- stringr::str_replace_all(string = allMEPtweetsDF$clean_text, pattern = stringr::fixed("&amp;"), replacement = "&") 
 
