@@ -1,5 +1,5 @@
 ---
-title: "QuoteFinder Twitter bot - Star in Italy"
+title: "QuoteFinder Twitter bot"
 author: "Giorgio Comai (OBCT/CCI)"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output: html_document
@@ -25,26 +25,36 @@ pacman::p_load(RColorBrewer)
 pacman::p_load(webshot)
 pacman::p_load(htmlwidgets)
 
-bluesFunc <- colorRampPalette(colors = c("#dce2bd", "#00914e"))
+bluesFunc <- colorRampPalette(colors = c("#4292C6", "#08306B"))
 blues <- bluesFunc(5)
 
 dir.create(path = "img",showWarnings = FALSE)
 
 twitter_token <- readRDS(file = "twitter_token.rds")
+
 ```
 
 ```{r load data}
 dataFolder <- "/srv/shiny-server/QuoteFinderApp/data"
-dataset <- readRDS(file = file.path(dataFolder, "dataset.rds"))
-topHashtag <- readRDS(file = file.path(dataFolder, "hashtags.rds"))
+trendingHashtags <- readRDS(file = file.path(dataFolder, "trendingHashtags.rds"))
+dataset <- readRDS(file = file.path(dataFolder, "dataset.rds")) %>% 
+  filter(date>Sys.Date()-31) %>% 
+  filter(lang=="it")
+#topHashtag <- readRDS(file = file.path(dataFolder, "hashtags.rds"))
 
 ```
 
+Pick a hashtag randomly among top 3 trending
 
-```{r}
+```{r no sentiment hashtag}
 
-dataset <- dataset %>% 
-  filter(lang=="it") %>% 
+randomTopHashtag <- unlist(sample(head(trendingHashtags$it, 3), 1))
+
+NrOfTweets <- str_extract(string = randomTopHashtag, pattern = "([[:digit:]]+)")
+hashtag <- str_extract(string = randomTopHashtag, pattern = "([[:alnum:]]+)")
+
+dataset <- dataset %>%  
+  filter(purrr::map_lgl(.x = hashtags, .f = function (x) is.element(el = as.character(hashtag), set = x))) %>%
     select(clean_text) %>% 
   unnest_tokens(input = clean_text, output = word) %>% 
   # remove stopwords, if list for the relevant language is available, otherwise do nothing
@@ -60,25 +70,25 @@ colour <- dataset %>%
     n > quantile(n)[1]& n<=quantile(n)[2] ~ blues[2],
     n > quantile(n)[2]& n<=quantile(n)[3] ~ blues[3],
     n > quantile(n)[3]& n<=quantile(n)[4] ~ blues[4],
-    n > quantile(n)[4]& n<=quantile(n)[5] ~ blues[4]
+    n > quantile(n)[4]& n<=quantile(n)[5] ~ blues[5]
   )) %>% pull(colour)
 
-#sizeVar <- as.numeric(quantile(dataset$n)[5]/quantile(dataset$n)[1]/nrow(dataset)*5)
-# graph <- dataset %>% 
-#   wordcloud2(size = sizeVar, color = colour)
+sizeVar <- as.numeric(quantile(dataset$n)[5]/quantile(dataset$n)[1]/nrow(dataset)*36)
+graph <- dataset %>%
+  wordcloud2(size = sizeVar, color = colour)
 
-graph <- dataset %>% wordcloud2(color = colour, size = 0.7, shape = "star")
+graph <- dataset %>% wordcloud2(color = colour, size = sizeVar)
 
-filename <- file.path("img", paste(Sys.time(), "star_wordcloud2_3months_IT.png", sep = "-"))
+filename <- file.path("img", paste(Sys.time(), "wordcloud2 trending hashtag", hashtag, "IT.png", sep = "-"))
 
 saveWidget(graph,"tmp.html",selfcontained = FALSE)
-webshot("tmp.html", filename, delay = 60, vwidth = 2048, vheight = 1512)
+webshot("tmp.html", filename, delay = 10, vwidth = 2048, vheight = 1512)
+
+randomTopHashtag
 
 ```
-
 
 ```{r}
 # Post tweet
-post_tweet(status = paste0("What did MEPs tweet in Italian in the last three months? Here's a summary in a star. Find out more: https://www.europeandatajournalism.eu/Tools-for-journalists/Quote-Finder/"), media = filename, token = twitter_token)
+post_tweet(status = paste0("Here's one of the trending hashtags among MEPs tweeting in Italian this week: #", hashtag, ". Find out more at https://www.europeandatajournalism.eu/Tools-for-journalists/Quote-Finder/"), media = filename, token = twitter_token)
 ```
-
